@@ -83,3 +83,74 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(errorResponse, { status: 500 });
   }
 }
+
+export async function POST(request: Request) {
+  try {
+    const baseUrl = process.env.RINSR_API_BASE;
+    const cookieToken = (await cookies()).get('rinsr_token')?.value;
+    const token = cookieToken || undefined;
+
+    if (!baseUrl) {
+      return NextResponse.json(
+        { success: false, message: 'Missing RINSR_API_BASE' },
+        { status: 500 }
+      );
+    }
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized - Missing token' },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    console.log('📦 Plan Create Payload:', JSON.stringify(body, null, 2));
+
+    const upstreamRes = await fetch(`${baseUrl}/plans`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+
+    const rawText = await upstreamRes.text();
+    let data: any;
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      data = { raw: rawText };
+    }
+
+    console.log(
+      '📤 Upstream Plan Create Response:',
+      JSON.stringify(data, null, 2)
+    );
+
+    if (!upstreamRes.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: data?.message || 'Upstream error',
+          error: rawText
+        },
+        { status: upstreamRes.status }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Plan created successfully',
+      data
+    });
+  } catch (err) {
+    console.error('🔥 POST /api/plans failed:', err);
+    return NextResponse.json(
+      { success: false, message: 'Server error', error: String(err) },
+      { status: 500 }
+    );
+  }
+}
