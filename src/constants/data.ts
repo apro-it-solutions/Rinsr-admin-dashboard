@@ -86,13 +86,21 @@ export const navItems: NavItem[] = [
     items: [] // Empty array as there are no child items for Dashboard
   },
   {
-    title: 'Product',
-    url: '/dashboard/product',
-    icon: 'product',
-    shortcut: ['p', 'p'],
+    title: 'Rinsr Users',
+    url: '/dashboard/users',
+    icon: 'users',
     isActive: false,
-    items: [] // No child items
+    shortcut: ['d', 'd'],
+    items: [] // Empty array as there are no child items for Dashboard
   },
+  // {
+  //   title: 'Product',
+  //   url: '/dashboard/product',
+  //   icon: 'product',
+  //   shortcut: ['p', 'p'],
+  //   isActive: false,
+  //   items: [] // No child items
+  // },
   {
     title: 'Account',
     url: '#', // Placeholder as there is no direct link for the parent
@@ -105,23 +113,23 @@ export const navItems: NavItem[] = [
         url: '/dashboard/profile',
         icon: 'userPen',
         shortcut: ['m', 'm']
-      },
-      {
-        title: 'Login',
-        shortcut: ['l', 'l'],
-        url: '/',
-        icon: 'login'
       }
+      // {
+      //   title: 'Login',
+      //   shortcut: ['l', 'l'],
+      //   url: '/',
+      //   icon: 'login'
+      // }
     ]
-  },
-  {
-    title: 'Kanban',
-    url: '/dashboard/kanban',
-    icon: 'kanban',
-    shortcut: ['k', 'k'],
-    isActive: false,
-    items: [] // No child items
   }
+  // {
+  //   title: 'Kanban',
+  //   url: '/dashboard/kanban',
+  //   icon: 'kanban',
+  //   shortcut: ['k', 'k'],
+  //   isActive: false,
+  //   items: [] // No child items
+  // }
 ];
 
 export interface SaleUser {

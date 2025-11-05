@@ -81,6 +81,30 @@ export default function AppSidebar() {
     // Side effects based on sidebar state changes
   }, [isOpen]);
 
+  const [admin, setAdmin] = React.useState<{
+    name: string;
+    email: string;
+  } | null>(null);
+
+  React.useEffect(() => {
+    async function fetchAdmin() {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.success && data?.admin) {
+          setAdmin({
+            name: data.admin.name,
+            email: data.admin.email
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch admin:', err);
+      }
+    }
+    fetchAdmin();
+  }, []);
+
   return (
     <Sidebar collapsible='icon'>
       <SidebarHeader>
@@ -161,9 +185,13 @@ export default function AppSidebar() {
                 >
                   <div className='flex items-center gap-2'>
                     <Avatar className='h-8 w-8 rounded-lg'>
-                      <AvatarFallback className='rounded-lg'>AD</AvatarFallback>
+                      <AvatarFallback className='rounded-lg'>
+                        {admin?.name?.slice(0, 2).toUpperCase() || 'AD'}
+                      </AvatarFallback>
                     </Avatar>
-                    <span className='truncate text-sm'>Admin</span>
+                    <span className='truncate text-sm'>
+                      {admin?.name || 'Admin'}
+                    </span>
                   </div>
                   <IconChevronsDown className='ml-auto size-4' />
                 </SidebarMenuButton>
@@ -179,13 +207,15 @@ export default function AppSidebar() {
                     <div className='flex items-center gap-2'>
                       <Avatar className='h-8 w-8 rounded-lg'>
                         <AvatarFallback className='rounded-lg'>
-                          AD
+                          {admin?.name?.slice(0, 2).toUpperCase() || 'AD'}
                         </AvatarFallback>
                       </Avatar>
                       <div className='grid flex-1 text-left text-sm leading-tight'>
-                        <span className='truncate font-semibold'>Admin</span>
+                        <span className='truncate font-semibold'>
+                          {admin?.name || 'Admin'}
+                        </span>
                         <span className='truncate text-xs'>
-                          admin@example.com
+                          {admin?.email || 'admin@example.com'}
                         </span>
                       </div>
                     </div>
@@ -200,14 +230,14 @@ export default function AppSidebar() {
                     <IconUserCircle className='mr-2 h-4 w-4' />
                     Profile
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  {/* <DropdownMenuItem>
                     <IconCreditCard className='mr-2 h-4 w-4' />
                     Billing
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  </DropdownMenuItem> */}
+                  {/* <DropdownMenuItem>
                     <IconBell className='mr-2 h-4 w-4' />
                     Notifications
-                  </DropdownMenuItem>
+                  </DropdownMenuItem> */}
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
