@@ -100,13 +100,13 @@ export default function UsersPage() {
               }}
               className='bg-card text-foreground border-input focus:ring-ring max-w-xs'
             />
-            <Link
+            {/* <Link
               href='/dashboard/users/new'
               className={cn(buttonVariants(), 'text-xs md:text-sm')}
             >
               <UserPlus className='mr-2 h-4 w-4' />
               Add User
-            </Link>
+            </Link> */}
           </div>
         </div>
 
@@ -162,7 +162,7 @@ export default function UsersPage() {
                         <Button
                           variant='outline'
                           size='sm'
-                          className='hover:bg-accent hover:text-accent-foreground'
+                          className='hover:bg-accent hover:text-accent-foreground cursor-pointer'
                         >
                           <Pencil className='mr-2 h-4 w-4' />
                           Edit

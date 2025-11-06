@@ -150,11 +150,16 @@ export default function AdminsPage() {
                     </TableCell>
                     <TableCell className='flex justify-end gap-2 pr-6'>
                       <Link href={`/dashboard/admins/${admin._id}/edit`}>
-                        <Button variant='outline' size='sm'>
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          className='cursor-pointer'
+                        >
                           <IconPencil className='mr-2 h-4 w-4' /> Edit
                         </Button>
                       </Link>
                       <Button
+                        className='cursor-pointer'
                         variant='destructive'
                         size='sm'
                         disabled={!admin.is_active}

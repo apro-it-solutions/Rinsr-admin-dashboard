@@ -24,6 +24,17 @@ import { getOrders } from '@/lib/api/orders';
 import { Order } from '@/constants/data';
 import { Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from '@/components/ui/alert-dialog';
 
 interface OrdersPageProps {
   className?: string;
@@ -36,6 +47,7 @@ export default function OrdersPage({ className }: OrdersPageProps) {
   const [pageIndex, setPageIndex] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [total, setTotal] = useState(0);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchOrders() {
@@ -93,15 +105,22 @@ export default function OrdersPage({ className }: OrdersPageProps) {
       });
 
       const data = await response.json();
+      console.log(data);
+
       if (data.success) {
-        // Update state to remove the canceled order or refresh the list
-        setOrders(orders.filter((order) => order.id !== orderId));
+        // Update the cancelled order status in state
+        setOrders((prev) =>
+          prev.map((order) =>
+            order.id === orderId ? { ...order, status: 'cancelled' } : order
+          )
+        );
+        setAlertMessage('✅ Order cancelled successfully!');
       } else {
-        alert('Failed to cancel the order');
+        setAlertMessage(`⚠️ ${data.message || 'Failed to cancel the order'}`);
       }
     } catch (error) {
       console.error('Error canceling order:', error);
-      alert('Something went wrong. Please try again.');
+      setAlertMessage('❌ Something went wrong. Please try again.');
     }
   };
 
@@ -150,56 +169,92 @@ export default function OrdersPage({ className }: OrdersPageProps) {
                   </TableRow>
                 ))
               ) : displayedOrders.length > 0 ? (
-                displayedOrders.map((order, idx) => (
-                  <TableRow
-                    key={order.id ?? idx}
-                    className={cn(
-                      'hover:bg-accent hover:text-accent-foreground transition-colors',
-                      idx % 2 === 0 ? 'bg-background' : 'bg-muted/30'
-                    )}
-                  >
-                    <TableCell className='font-medium'>
-                      {order.plan_name || '—'}
-                    </TableCell>
+                displayedOrders.map((order, idx) => {
+                  const isCancelled = order.status === 'cancelled';
+                  return (
+                    <TableRow
+                      key={order.id ?? idx}
+                      className={cn(
+                        'hover:bg-accent hover:text-accent-foreground transition-colors',
+                        idx % 2 === 0 ? 'bg-background' : 'bg-muted/30'
+                      )}
+                    >
+                      <TableCell className='font-medium'>
+                        {order.plan_name || '—'}
+                      </TableCell>
 
-                    {/* ✅ Admin fallback */}
-                    <TableCell>
-                      {order.name && order.name !== 'N/A'
-                        ? order.name
-                        : 'Admin'}
-                    </TableCell>
+                      <TableCell>
+                        {order.name && order.name !== 'N/A'
+                          ? order.name
+                          : 'Admin'}
+                      </TableCell>
 
-                    <TableCell>{order.plan_id_name || '—'}</TableCell>
-                    <TableCell>{order.address_line || '—'}</TableCell>
-                    <TableCell>
-                      {typeof order.pickup_time_slot === 'string'
-                        ? order.pickup_time_slot
-                        : '—'}
-                    </TableCell>
+                      <TableCell>{order.plan_id_name || '—'}</TableCell>
+                      <TableCell>{order.address_line || '—'}</TableCell>
+                      <TableCell>
+                        {typeof order.pickup_time_slot === 'string'
+                          ? order.pickup_time_slot
+                          : '—'}
+                      </TableCell>
 
-                    <TableCell className='pr-6 text-right'>
-                      <Link href={`/dashboard/orders/order/${order.id}/edit`}>
-                        <Button
-                          variant='outline'
-                          size='sm'
-                          className='hover:bg-accent hover:text-accent-foreground'
-                        >
-                          <Pencil className='mr-2 h-4 w-4' />
-                          Edit
-                        </Button>
-                      </Link>
-                      {/* Cancel Button */}
-                      <Button
-                        variant='destructive'
-                        size='sm'
-                        onClick={() => handleCancelOrder(order.id)}
-                        className='ml-2'
-                      >
-                        Cancel
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                      <TableCell className='space-x-2 pr-6 text-right'>
+                        <Link href={`/dashboard/orders/order/${order.id}/edit`}>
+                          <Button
+                            variant='outline'
+                            size='sm'
+                            className='hover:bg-accent hover:text-accent-foreground cursor-pointer'
+                          >
+                            <Pencil className='mr-2 h-4 w-4' />
+                            Edit
+                          </Button>
+                        </Link>
+
+                        {/* Cancel Button */}
+                        {isCancelled ? (
+                          <Button
+                            variant='secondary'
+                            size='sm'
+                            disabled
+                            className='ml-2 cursor-not-allowed opacity-70'
+                          >
+                            Cancelled
+                          </Button>
+                        ) : (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant='destructive'
+                                size='sm'
+                                className='ml-2 cursor-pointer'
+                              >
+                                Cancel
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  Cancel Order
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to cancel this order?
+                                  This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Close</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleCancelOrder(order.id)}
+                                >
+                                  Confirm Cancel
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               ) : (
                 <TableRow>
                   <TableCell
@@ -293,6 +348,26 @@ export default function OrdersPage({ className }: OrdersPageProps) {
             </div>
           </div>
         </div>
+
+        {/* ✅ Alert Dialog for messages */}
+        {alertMessage && (
+          <AlertDialog
+            open={!!alertMessage}
+            onOpenChange={() => setAlertMessage(null)}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Notification</AlertDialogTitle>
+                <AlertDialogDescription>{alertMessage}</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogAction onClick={() => setAlertMessage(null)}>
+                  OK
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
     </PageContainer>
   );

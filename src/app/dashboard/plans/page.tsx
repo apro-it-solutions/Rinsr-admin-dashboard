@@ -200,7 +200,7 @@ export default function PlansPage() {
                           <Button
                             variant='outline'
                             size='sm'
-                            className='hover:bg-accent hover:text-accent-foreground'
+                            className='hover:bg-accent hover:text-accent-foreground cursor-pointer'
                           >
                             <Pencil className='mr-2 h-4 w-4' />
                             Edit
@@ -208,6 +208,7 @@ export default function PlansPage() {
                         </Link>
 
                         <Button
+                          className='cursor-pointer'
                           variant={plan.is_active ? 'destructive' : 'outline'}
                           size='sm'
                           disabled={plan.is_active === false}

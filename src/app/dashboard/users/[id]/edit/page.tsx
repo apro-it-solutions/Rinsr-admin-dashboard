@@ -25,20 +25,12 @@ import {
   AlertDialogDescription,
   AlertDialogAction
 } from '@/components/ui/alert-dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
 
-// ✅ Zod schema for validation
+// ✅ Zod schema for validation (no role)
 const userSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Enter a valid email'),
   phone: z.string().optional(),
-  role: z.string().min(1, 'Role is required'),
   password: z.string().optional(),
   is_active: z.boolean().default(true)
 });
@@ -62,7 +54,6 @@ export default function EditUserPage() {
       name: '',
       email: '',
       phone: '',
-      role: '',
       password: '',
       is_active: true
     }
@@ -81,7 +72,6 @@ export default function EditUserPage() {
             name: user.name || '',
             email: user.email || '',
             phone: user.phone || '',
-            role: user.role || '',
             is_active: user.is_active ?? true
           });
         } else {
@@ -108,7 +98,6 @@ export default function EditUserPage() {
         name: values.name,
         email: values.email,
         phone: values.phone,
-        role: values.role,
         is_active: values.is_active
       };
 
@@ -200,31 +189,6 @@ export default function EditUserPage() {
                 </FormItem>
               )}
             />
-
-            {/* Role */}
-            <FormField
-              control={form.control}
-              name='role'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder='Select role' />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value='user'>User</SelectItem>
-                      <SelectItem value='admin'>Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Password */}
           </div>
 
           {/* Buttons */}
