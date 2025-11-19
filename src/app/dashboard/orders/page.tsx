@@ -24,6 +24,9 @@ import { getOrders } from '@/lib/api/orders';
 import { Order } from '@/constants/data';
 import { Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +43,11 @@ interface OrdersPageProps {
   className?: string;
 }
 
+interface HubOption {
+  _id: string;
+  name: string;
+}
+
 export default function OrdersPage({ className }: OrdersPageProps) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [search, setSearch] = useState('');
@@ -48,6 +56,39 @@ export default function OrdersPage({ className }: OrdersPageProps) {
   const [perPage, setPerPage] = useState(10);
   const [total, setTotal] = useState(0);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [hubs, setHubs] = useState<HubOption[]>([]);
+  const [selectedHubId, setSelectedHubId] = useState<string>('');
+  const [assigning, setAssigning] = useState(false);
+
+  // Fetch hubs for bulk assignment
+  useEffect(() => {
+    async function fetchHubs() {
+      try {
+        const res = await fetch('/api/hubs');
+        const data = await res.json();
+
+        const raw =
+          data.hubs ||
+          data.data?.hubs ||
+          (Array.isArray(data) ? data : []) ||
+          [];
+
+        setHubs(
+          raw.map((h: any) => ({
+            _id: h._id,
+            name: h.name || 'Unnamed Hub'
+          }))
+        );
+      } catch (err) {
+        console.error('Failed to fetch hubs:', err);
+      }
+    }
+
+    fetchHubs();
+  }, []);
 
   useEffect(() => {
     async function fetchOrders() {
@@ -96,6 +137,81 @@ export default function OrdersPage({ className }: OrdersPageProps) {
     Math.ceil((filteredOrders.length || 0) / perPage)
   );
 
+  // Toggle order selection
+  const toggleOrderSelection = (orderId: string) => {
+    setSelectedOrderIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(orderId)) {
+        next.delete(orderId);
+      } else {
+        next.add(orderId);
+      }
+      return next;
+    });
+  };
+
+  // Select all displayed orders
+  const toggleSelectAll = () => {
+    if (selectedOrderIds.size === displayedOrders.length) {
+      setSelectedOrderIds(new Set());
+    } else {
+      setSelectedOrderIds(new Set(displayedOrders.map((o) => o.id)));
+    }
+  };
+
+  // Assign hub to selected orders using bulk API
+  const handleAssignHub = async () => {
+    if (!selectedHubId) {
+      toast.error('Please select a hub');
+      return;
+    }
+
+    if (selectedOrderIds.size === 0) {
+      toast.error('Please select at least one order');
+      return;
+    }
+
+    setAssigning(true);
+    const orderIdsArray = Array.from(selectedOrderIds);
+
+    try {
+      const res = await fetch('/api/orders/bulk/assign-hub', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hub_id: selectedHubId,
+          order_ids: orderIdsArray
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success(
+          `Hub assigned to ${orderIdsArray.length} order(s) successfully`
+        );
+        setSelectedOrderIds(new Set());
+        setSelectedHubId('');
+        // Refresh orders
+        const response = await getOrders({
+          page: pageIndex,
+          limit: perPage,
+          search
+        });
+        if (response.success && Array.isArray(response.data)) {
+          setOrders(response.data);
+        }
+      } else {
+        toast.error(data.message || 'Failed to assign hub');
+      }
+    } catch (error) {
+      console.error('Error assigning hub:', error);
+      toast.error('Something went wrong while assigning hub');
+    } finally {
+      setAssigning(false);
+    }
+  };
+
   // Cancel order function
   const handleCancelOrder = async (orderId: string) => {
     try {
@@ -130,20 +246,68 @@ export default function OrdersPage({ className }: OrdersPageProps) {
         {/* Header */}
         <div className='flex w-full items-center justify-between gap-2'>
           <h1 className='text-foreground text-2xl font-bold'>Orders</h1>
-          <input
+          <Input
             type='text'
             placeholder='Search orders...'
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className='border-input bg-card text-foreground focus:ring-ring max-w-xs rounded-md border px-3 py-2 text-sm shadow-sm transition-colors focus:ring-2 focus:outline-none'
+            className='bg-card text-foreground border-input focus:ring-ring max-w-xs'
           />
         </div>
+
+        {/* Hub Assignment Section */}
+        {selectedOrderIds.size > 0 && (
+          <div className='border-border bg-card text-foreground flex items-center gap-4 rounded-lg border p-4 shadow-sm'>
+            <div className='flex items-center gap-2'>
+              <span className='text-sm font-medium'>
+                {selectedOrderIds.size} order(s) selected
+              </span>
+            </div>
+            <div className='flex flex-1 items-center gap-3'>
+              <Select value={selectedHubId} onValueChange={setSelectedHubId}>
+                <SelectTrigger className='bg-background text-foreground border-input w-[250px]'>
+                  <SelectValue placeholder='Select hub to assign' />
+                </SelectTrigger>
+                <SelectContent className='bg-card text-foreground'>
+                  {hubs.map((hub) => (
+                    <SelectItem key={hub._id} value={hub._id}>
+                      {hub.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={handleAssignHub}
+                disabled={!selectedHubId || assigning}
+                className='whitespace-nowrap'
+              >
+                {assigning ? 'Assigning...' : 'Assign Hub'}
+              </Button>
+              <Button
+                variant='outline'
+                onClick={() => setSelectedOrderIds(new Set())}
+                disabled={assigning}
+              >
+                Clear Selection
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Table */}
         <div className='border-border bg-card text-foreground overflow-x-auto rounded-lg border shadow-sm'>
           <Table className='w-full border-collapse'>
             <TableHeader className='bg-muted/70 sticky top-0 z-10'>
               <TableRow>
+                <TableHead className='text-foreground/80 w-12'>
+                  <Checkbox
+                    checked={
+                      displayedOrders.length > 0 &&
+                      displayedOrders.every((o) => selectedOrderIds.has(o.id))
+                    }
+                    onCheckedChange={toggleSelectAll}
+                  />
+                </TableHead>
                 <TableHead className='text-foreground/80'>Plan Name</TableHead>
                 <TableHead className='text-foreground/80'>Name</TableHead>
                 <TableHead className='text-foreground/80'>Plan</TableHead>
@@ -151,6 +315,10 @@ export default function OrdersPage({ className }: OrdersPageProps) {
                 <TableHead className='text-foreground/80'>
                   Pickup Slot
                 </TableHead>
+                <TableHead className='text-foreground/80'>
+                  Order Status
+                </TableHead>
+                <TableHead className='text-foreground/80'>Hub</TableHead>
                 <TableHead className='text-foreground/80 pr-6 text-right'>
                   Actions
                 </TableHead>
@@ -161,7 +329,7 @@ export default function OrdersPage({ className }: OrdersPageProps) {
               {loading ? (
                 Array.from({ length: perPage }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 6 }).map((_, j) => (
+                    {Array.from({ length: 8 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className='bg-muted/40 h-6 w-full' />
                       </TableCell>
@@ -176,9 +344,16 @@ export default function OrdersPage({ className }: OrdersPageProps) {
                       key={order.id ?? idx}
                       className={cn(
                         'hover:bg-accent hover:text-accent-foreground transition-colors',
-                        idx % 2 === 0 ? 'bg-background' : 'bg-muted/30'
+                        idx % 2 === 0 ? 'bg-background' : 'bg-muted/30',
+                        selectedOrderIds.has(order.id) && 'bg-primary/10'
                       )}
                     >
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedOrderIds.has(order.id)}
+                          onCheckedChange={() => toggleOrderSelection(order.id)}
+                        />
+                      </TableCell>
                       <TableCell className='font-medium'>
                         {order.plan_name || '—'}
                       </TableCell>
@@ -195,6 +370,20 @@ export default function OrdersPage({ className }: OrdersPageProps) {
                         {typeof order.pickup_time_slot === 'string'
                           ? order.pickup_time_slot
                           : '—'}
+                      </TableCell>
+                      <TableCell>{order.status || '—'}</TableCell>
+                      <TableCell>
+                        {(() => {
+                          const hub = order.hub_id || order.hub;
+                          if (typeof hub === 'object' && hub?.name) {
+                            return hub.name;
+                          }
+                          if (typeof hub === 'string') {
+                            const hubObj = hubs.find((h) => h._id === hub);
+                            return hubObj?.name || '—';
+                          }
+                          return '—';
+                        })()}
                       </TableCell>
 
                       <TableCell className='space-x-2 pr-6 text-right'>
@@ -258,7 +447,7 @@ export default function OrdersPage({ className }: OrdersPageProps) {
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={8}
                     className='text-muted-foreground py-10 text-center text-sm'
                   >
                     No results found.

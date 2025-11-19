@@ -155,6 +155,14 @@ export async function GET(request: NextRequest) {
       // ✅ Service Name
       const service_name = item.service_id?.name ?? '—';
 
+      // ✅ Vendor ID (can be string or populated object)
+      const vendor_id = item.vendor_id || item.vendor || null;
+
+      // ✅ Hub ID (can be string or populated object)
+      const hub_id = item.hub_id || item.hub || null;
+
+      const status = item.status || null;
+
       return {
         id,
         plan_name,
@@ -162,7 +170,10 @@ export async function GET(request: NextRequest) {
         plan_id_name,
         address_line,
         pickup_time_slot,
-        service_name
+        service_name,
+        vendor_id,
+        hub_id,
+        status
       };
     });
 

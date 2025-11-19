@@ -41,6 +41,9 @@ export default function EditOrderPage() {
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const [vendors, setVendors] = useState<
+    { _id: string; company_name: string }[]
+  >([]);
 
   const form = useForm({
     defaultValues: {
@@ -50,12 +53,39 @@ export default function EditOrderPage() {
       address_label: '', // ✅ added
       address_line: '', // ✅ added
       heavy_items: '',
-      status: ''
+      status: '',
+      vendor_id: ''
     }
   });
 
-  // ✅ Fetch order details
+  // ✅ Fetch vendors
+  useEffect(() => {
+    async function fetchVendors() {
+      try {
+        const res = await fetch('/api/vendors');
+        const data = await res.json();
 
+        const raw =
+          data.vendors ||
+          data.data?.vendors ||
+          (Array.isArray(data) ? data : []) ||
+          [];
+
+        setVendors(
+          raw.map((v: any) => ({
+            _id: v._id,
+            company_name: v.company_name || v.companyName || 'Unnamed Vendor'
+          }))
+        );
+      } catch (err) {
+        console.error('Failed to fetch vendors:', err);
+      }
+    }
+
+    fetchVendors();
+  }, []);
+
+  // ✅ Fetch order details
   useEffect(() => {
     async function fetchOrder() {
       try {
@@ -81,6 +111,18 @@ export default function EditOrderPage() {
               .padStart(2, '0')}`;
           };
 
+          // Extract vendor_id (can be string or object)
+          const vendorId =
+            typeof order.vendor_id === 'string'
+              ? order.vendor_id
+              : typeof order.vendor_id === 'object'
+                ? order.vendor_id?._id
+                : typeof order.vendor === 'string'
+                  ? order.vendor
+                  : typeof order.vendor === 'object'
+                    ? order.vendor?._id
+                    : '';
+
           form.reset({
             pickup_date: order.pickup_date
               ? order.pickup_date.split('T')[0]
@@ -90,7 +132,8 @@ export default function EditOrderPage() {
             address_label: pickup_address.label || 'Home',
             address_line: pickup_address.address_line || '',
             heavy_items: order.heavy_items || '',
-            status: order.status || 'scheduled'
+            status: order.status || 'scheduled',
+            vendor_id: vendorId || ''
           });
         } else {
           setAlertMessage('Failed to load order.');
@@ -112,7 +155,7 @@ export default function EditOrderPage() {
   async function onSubmit(values: any) {
     setSaving(true);
     try {
-      const payload = {
+      const payload: any = {
         pickup_date: values.pickup_date,
         pickup_time_slot: {
           start: values.pickup_time_slot_start,
@@ -125,6 +168,21 @@ export default function EditOrderPage() {
         heavy_items: values.heavy_items,
         status: values.status
       };
+
+      // Only include vendor_id if it's not empty
+      if (
+        values.vendor_id &&
+        values.vendor_id !== 'none' &&
+        values.vendor_id !== ''
+      ) {
+        payload.vendor_id = values.vendor_id;
+        payload.vendorId = values.vendor_id; // Try camelCase as well
+      }
+
+      console.log(
+        '📤 Updating order with payload:',
+        JSON.stringify(payload, null, 2)
+      );
 
       const res = await fetch(`/api/orders/order/${orderId}`, {
         method: 'PUT',
@@ -272,9 +330,46 @@ export default function EditOrderPage() {
                     </FormControl>
                     <SelectContent>
                       <SelectItem value='scheduled'>Scheduled</SelectItem>
-                      <SelectItem value='in-progress'>In Progress</SelectItem>
-                      <SelectItem value='completed'>Completed</SelectItem>
+                      <SelectItem value='picked_up'>Picked Up</SelectItem>
+                      <SelectItem value='processing'>Processing</SelectItem>
+                      <SelectItem value='ready'>Ready</SelectItem>
+                      <SelectItem value='out_for_delivery'>
+                        Out for Delivery
+                      </SelectItem>
+                      <SelectItem value='delivered'>Delivered</SelectItem>
                       <SelectItem value='cancelled'>Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Vendor */}
+            <FormField
+              control={form.control}
+              name='vendor_id'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Vendor</FormLabel>
+                  <Select
+                    onValueChange={(value) =>
+                      field.onChange(value === 'none' ? '' : value)
+                    }
+                    value={field.value || 'none'}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder='Select vendor' />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value='none'>No Vendor</SelectItem>
+                      {vendors.map((vendor) => (
+                        <SelectItem key={vendor._id} value={vendor._id}>
+                          {vendor.company_name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

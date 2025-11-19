@@ -30,6 +30,10 @@ export type Order = {
   plan_id_name?: string;
   address_line?: string;
   pickup_time_slot?: string;
+  vendor_id?: string | { _id: string; company_name?: string };
+  vendor?: { _id: string; company_name?: string };
+  hub_id?: string | { _id: string; name?: string };
+  hub?: { _id: string; name?: string };
 };
 
 export type OrderItem = {

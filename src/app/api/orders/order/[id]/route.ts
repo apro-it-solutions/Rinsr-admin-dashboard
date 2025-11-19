@@ -61,9 +61,17 @@ export async function GET(
       );
     }
 
+    // Ensure vendor_id is included in response
+    const order = data?.order ?? data?.data ?? data;
+    console.log(
+      `📦 Order ${orderId} vendor_id:`,
+      order?.vendor_id || order?.vendor || 'not found'
+    );
+
     return NextResponse.json({
       success: true,
-      data: data?.order ?? data?.data ?? data
+      order: order, // Use 'order' key for consistency
+      data: order
     });
   } catch (err) {
     console.error('🔥 GET error:', err);
@@ -104,6 +112,11 @@ export async function PUT(
 
     const body = await request.json();
 
+    console.log(
+      `📤 PUT /api/orders/order/${orderId} payload:`,
+      JSON.stringify(body, null, 2)
+    );
+
     const upstreamRes = await fetch(`${baseUrl}/orders/${orderId}`, {
       method: 'PUT',
       headers: {
@@ -133,10 +146,17 @@ export async function PUT(
       );
     }
 
+    const updatedOrder = data?.order ?? data?.data ?? data;
+    console.log(
+      `➡️ PUT response vendor_id:`,
+      updatedOrder?.vendor_id || updatedOrder?.vendor || 'not found'
+    );
+
     return NextResponse.json({
       success: true,
       message: 'Order updated successfully',
-      data: data?.order ?? data?.data ?? data
+      order: updatedOrder,
+      data: updatedOrder
     });
   } catch (err) {
     return NextResponse.json(
