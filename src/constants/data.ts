@@ -141,6 +141,14 @@ export const navItems: NavItem[] = [
     items: [] // No child items
   },
   {
+    title: 'Delivery Partners',
+    url: '/dashboard/delivery-partners',
+    icon: 'truck',
+    shortcut: ['p', 'p'],
+    isActive: false,
+    items: [] // No child items
+  },
+  {
     title: 'Hubs',
     url: '/dashboard/hubs',
     icon: 'hub',
