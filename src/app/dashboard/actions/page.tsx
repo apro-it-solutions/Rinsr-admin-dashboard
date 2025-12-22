@@ -13,6 +13,13 @@ import {
   AlertDialogDescription,
   AlertDialogAction
 } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { navItems } from '@/constants/data';
 
 const ROLE_OPTIONS = [
@@ -143,13 +150,13 @@ export default function PermissionManager() {
     }
   }
 
-  if (loading) {
-    return (
-      <PageContainer>
-        <p className='text-muted-foreground p-6'>Loading...</p>
-      </PageContainer>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <PageContainer>
+  //       <p className='text-muted-foreground p-6'>Loading...</p>
+  //     </PageContainer>
+  //   );
+  // }
 
   return (
     <PageContainer scrollable={true}>
@@ -165,22 +172,34 @@ export default function PermissionManager() {
           {/* Role selector */}
           <div>
             <label className='mb-2 block font-medium'>Select Role</label>
-            <select
-              className='block w-full rounded-md border px-3 py-2 text-sm'
+            <Select
               value={role}
-              onChange={(e) => handleRoleChange(e.target.value)}
+              onValueChange={handleRoleChange}
+              disabled={loading}
             >
-              {ROLE_OPTIONS.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className='w-full'>
+                <SelectValue placeholder='Select a role' />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLE_OPTIONS.map((r) => (
+                  <SelectItem key={r.value} value={r.value}>
+                    {r.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Allowed pages */}
-          <div>
-            <label className='mb-2 block font-medium'>Allowed Pages</label>
+          <div className={loading ? 'pointer-events-none opacity-50' : ''}>
+            <label className='mb-2 block font-medium'>
+              Allowed Pages{' '}
+              {loading && (
+                <span className='text-muted-foreground ml-2 text-xs'>
+                  (Loading...)
+                </span>
+              )}
+            </label>
             <div className='space-y-2 rounded-md border p-3'>
               {PAGE_OPTIONS.map((page) => (
                 <label
@@ -192,6 +211,7 @@ export default function PermissionManager() {
                     className='h-4 w-4'
                     checked={allowedPages.includes(page.id)}
                     onChange={() => togglePage(page.id)}
+                    disabled={loading}
                   />
                   <span>{page.label}</span>
                   <span className='text-muted-foreground text-xs'>
@@ -203,7 +223,7 @@ export default function PermissionManager() {
           </div>
 
           <div>
-            <Button onClick={savePermissions} disabled={saving}>
+            <Button onClick={savePermissions} disabled={saving || loading}>
               {saving ? 'Saving...' : 'Save Permissions'}
             </Button>
           </div>
