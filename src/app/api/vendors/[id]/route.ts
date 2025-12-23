@@ -9,9 +9,9 @@ const BASE_URL =
 ============================================================ */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
+  const { id } = await params;
   const finalUrl = `${BASE_URL.replace(/\/+$/, '')}/vendors/${id}`;
 
   console.log('📡 Fetching vendor details from:', finalUrl);
@@ -61,9 +61,9 @@ export async function GET(
 ============================================================ */
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
+  const { id } = await params;
   const finalUrl = `${BASE_URL.replace(/\/+$/, '')}/vendors/${id}`;
 
   console.log('✏️ Updating vendor at:', finalUrl);
@@ -121,9 +121,9 @@ export async function PUT(
 ============================================================ */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
+  const { id } = await params;
   const finalUrl = `${BASE_URL.replace(/\/+$/, '')}/vendors/${id}`;
 
   console.log(' Deleting vendor at:', finalUrl);

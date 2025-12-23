@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 
 // GET /api/hubs/[id]
 export async function GET(req: NextRequest, context: any) {
-  const hubId = context?.params?.id;
+  const { id: hubId } = await context.params;
   console.log(`🟢 GET /api/hubs/${hubId}`);
 
   try {
@@ -74,7 +74,7 @@ export async function GET(req: NextRequest, context: any) {
 
 // PUT /api/hubs/[id]
 export async function PUT(req: NextRequest, context: any) {
-  const hubId = context?.params?.id;
+  const { id: hubId } = await context.params;
   console.log(`🟡 PUT /api/hubs/${hubId}`);
 
   try {
@@ -150,7 +150,7 @@ export async function PUT(req: NextRequest, context: any) {
 
 // DELETE /api/hubs/[id]
 export async function DELETE(req: NextRequest, context: any) {
-  const hubId = context?.params?.id;
+  const { id: hubId } = await context.params;
   console.log(`🔴 DELETE /api/hubs/${hubId}`);
 
   try {

@@ -4,9 +4,9 @@ import { cookies } from 'next/headers';
 // GET /api/users/[id]
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
+  const { id } = await params;
 
   try {
     const baseUrl = process.env.RINSR_API_BASE;
@@ -69,9 +69,9 @@ export async function GET(
 // PATCH /api/users/[id]
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
+  const { id } = await params;
 
   try {
     const baseUrl = process.env.RINSR_API_BASE;

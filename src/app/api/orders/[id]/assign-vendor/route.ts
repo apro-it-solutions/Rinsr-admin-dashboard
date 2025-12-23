@@ -7,9 +7,9 @@ import { cookies } from 'next/headers';
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const orderId = params.id;
+  const { id: orderId } = await params;
   console.log(`🟢 POST /api/orders/${orderId}/assign-vendor`);
 
   try {

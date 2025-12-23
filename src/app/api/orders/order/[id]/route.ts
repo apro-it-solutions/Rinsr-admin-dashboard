@@ -8,9 +8,9 @@ import { OrderResponse } from '@/constants/data';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const orderId = params.id;
+  const { id: orderId } = await params;
   // console.log(` GET /api/orders/order/${orderId}`);
 
   try {
@@ -102,9 +102,9 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const orderId = params.id;
+  const { id: orderId } = await params;
 
   try {
     const baseUrl = process.env.RINSR_API_BASE;
@@ -195,10 +195,10 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const orderId = params.id;
+    const { id: orderId } = await params;
 
     const baseUrl = process.env.RINSR_API_BASE;
     const cookieStore = await cookies();

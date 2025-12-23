@@ -25,6 +25,7 @@ export type Order = {
   updated_at?: string;
   items?: OrderItem[];
   vendor_status?: string;
+  user_status?: string;
 
   // Fields used by current orders listing UI (from real API)
   plan_name?: string;
@@ -53,6 +54,8 @@ export type Order = {
 
   hub_id?: string | { _id: string; name?: string };
   hub?: { _id: string; name?: string };
+  service_id?: string | null;
+  service_name?: string;
 };
 
 export type OrderItem = {

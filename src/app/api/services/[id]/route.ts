@@ -11,8 +11,9 @@ interface ServiceResponse {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const baseUrl = process.env.RINSR_API_BASE;
     const token = (await cookies()).get('rinsr_token')?.value;
@@ -28,7 +29,7 @@ export async function GET(
       ? baseUrl
       : `${baseUrl.replace(/\/+$/, '')}/api`;
 
-    const res = await fetch(`${normalizedBase}/services/${params.id}`, {
+    const res = await fetch(`${normalizedBase}/services/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: 'no-store'
     });
@@ -60,8 +61,9 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const baseUrl = process.env.RINSR_API_BASE;
     const token = (await cookies()).get('rinsr_token')?.value;
@@ -78,7 +80,7 @@ export async function PUT(
       ? baseUrl
       : `${baseUrl.replace(/\/+$/, '')}/api`;
 
-    const res = await fetch(`${normalizedBase}/services/${params.id}`, {
+    const res = await fetch(`${normalizedBase}/services/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

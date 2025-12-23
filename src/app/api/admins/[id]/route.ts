@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 
 // ✅ GET single admin
 export async function GET(req: NextRequest, context: any) {
-  const id = context?.params?.id;
+  const { id } = await context.params;
 
   try {
     const baseUrl = process.env.RINSR_API_BASE;
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest, context: any) {
 
 // ✅ PUT update admin
 export async function PUT(req: NextRequest, context: any) {
-  const id = context?.params?.id;
+  const { id } = await context.params;
 
   try {
     const baseUrl = process.env.RINSR_API_BASE;

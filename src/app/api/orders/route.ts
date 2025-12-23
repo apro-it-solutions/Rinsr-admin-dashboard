@@ -17,6 +17,9 @@ export async function GET(request: NextRequest) {
     const limit = searchParams.get('limit') || '10';
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || '';
+    const user_status = searchParams.get('user_status') || '';
+    const vendor_id = searchParams.get('vendor_id') || '';
+    const service_id = searchParams.get('service_id') || '';
 
     const baseUrl = process.env.RINSR_API_BASE;
     const cookieToken = (await cookies()).get('rinsr_token')?.value;
@@ -51,8 +54,11 @@ export async function GET(request: NextRequest) {
     if (limit) upstreamUrl.searchParams.set('limit', limit);
     if (search) upstreamUrl.searchParams.set('search', search);
     if (status) upstreamUrl.searchParams.set('status', status);
-
+    if (user_status) upstreamUrl.searchParams.set('user_status', user_status);
+    if (vendor_id) upstreamUrl.searchParams.set('vendor_id', vendor_id);
+    if (service_id) upstreamUrl.searchParams.set('service_id', service_id);
     // Fetch upstream API
+    console.log('🔗 Fetching Upstream Orders URL:', upstreamUrl.toString());
     const upstreamRes = await fetch(upstreamUrl, {
       method: 'GET',
       headers: {
@@ -173,7 +179,9 @@ export async function GET(request: NextRequest) {
         service_name,
         vendor_id,
         hub_id,
-        status
+        status,
+        user_status: item.user_status || null,
+        service_id: item.service_id?._id ?? item.service_id ?? null
       };
     });
 

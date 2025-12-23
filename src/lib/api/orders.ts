@@ -11,6 +11,9 @@ export interface GetOrdersParams {
   limit?: number;
   search?: string;
   status?: string;
+  user_status?: string;
+  vendor_id?: string;
+  service_id?: string;
 }
 
 export interface CreateOrderParams {
@@ -48,13 +51,24 @@ export interface UpdateOrderParams extends Partial<CreateOrderParams> {
 export async function getOrders(
   params: GetOrdersParams = {}
 ): Promise<OrderResponse> {
-  const { page = 1, limit = 10, search = '', status = '' } = params;
+  const {
+    page = 1,
+    limit = 10,
+    search = '',
+    status = '',
+    user_status = '',
+    vendor_id = '',
+    service_id = ''
+  } = params;
 
   const queryParams = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
     ...(search && { search }),
-    ...(status && { status })
+    ...(status && { status }),
+    ...(user_status && { user_status }),
+    ...(vendor_id && { vendor_id }),
+    ...(service_id && { service_id })
   });
 
   const response = await fetch(`${API_BASE_URL}/orders?${queryParams}`, {

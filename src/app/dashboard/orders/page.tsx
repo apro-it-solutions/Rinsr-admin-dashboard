@@ -40,6 +40,8 @@ interface OrdersPageProps {
   className?: string;
 }
 
+import { Checkbox } from '@/components/ui/checkbox';
+
 export default function OrdersPage({ className }: OrdersPageProps) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [search, setSearch] = useState('');
@@ -48,6 +50,54 @@ export default function OrdersPage({ className }: OrdersPageProps) {
   const [perPage, setPerPage] = useState(10);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
+  const [userStatusFilter, setUserStatusFilter] = useState<string>('all');
+  const [serviceFilter, setServiceFilter] = useState<string>('all');
+  const [vendors, setVendors] = useState<
+    { _id: string; companyName: string }[]
+  >([]);
+  const [services, setServices] = useState<{ _id: string; name: string }[]>([]);
+  const [selectedVendorForAssign, setSelectedVendorForAssign] = useState<
+    string | null
+  >(null);
+  const [isAssigning, setIsAssigning] = useState(false);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(
+    new Set()
+  );
+
+  // Fetch Filters on mount
+  useEffect(() => {
+    async function fetchFilters() {
+      try {
+        // Vendors
+        const resVendors = await fetch('/api/vendors', { cache: 'no-store' });
+        const dataVendors = await resVendors.json();
+        const rawVendors =
+          dataVendors.data?.vendors || dataVendors.vendors || [];
+        setVendors(
+          rawVendors.map((v: any) => ({
+            _id: v._id,
+            companyName: v.company_name || v.companyName || 'Unknown Vendor'
+          }))
+        );
+
+        // Services
+        const resServices = await fetch('/api/services', { cache: 'no-store' });
+        const dataServices = await resServices.json();
+        const rawServices = dataServices.services || [];
+        setServices(
+          rawServices.map((s: any) => ({
+            _id: s._id,
+            name: s.name
+          }))
+        );
+      } catch (err) {
+        console.error('Failed to fetch filters:', err);
+      }
+    }
+    fetchFilters();
+  }, []);
+
+  // Fetch Orders
   useEffect(() => {
     async function fetchOrders() {
       setLoading(true);
@@ -55,13 +105,16 @@ export default function OrdersPage({ className }: OrdersPageProps) {
         const response = await getOrders({
           page: pageIndex,
           limit: perPage,
+          user_status: userStatusFilter === 'all' ? '' : userStatusFilter,
           search
         });
 
         if (response.success && Array.isArray(response.data)) {
           setOrders(response.data);
+          setSelectedOrderIds(new Set());
         } else {
           setOrders([]);
+          setSelectedOrderIds(new Set());
         }
       } catch (error) {
         console.error('Error fetching orders:', error);
@@ -72,26 +125,115 @@ export default function OrdersPage({ className }: OrdersPageProps) {
     }
 
     fetchOrders();
-  }, [search, pageIndex, perPage]);
+  }, [search, pageIndex, perPage, userStatusFilter, serviceFilter]);
 
-  // Filter logic
-  const filteredOrders = useMemo(() => {
-    if (!search.trim()) return orders;
-    return orders.filter(
-      (o) =>
-        o.name?.toLowerCase().includes(search.toLowerCase()) ||
-        o.plan_name?.toLowerCase().includes(search.toLowerCase()) ||
-        o.address_line?.toLowerCase().includes(search.toLowerCase())
+  // Handle Bulk Assign
+  const handleBulkAssign = async () => {
+    if (!selectedVendorForAssign) return;
+
+    const selectedIds = Array.from(selectedOrderIds);
+
+    if (selectedIds.length === 0) {
+      setAlertMessage('⚠️ Please select at least one order to assign.');
+      setSelectedVendorForAssign(null);
+      return;
+    }
+
+    const vendorId = selectedVendorForAssign; // define local var for logging/logic
+
+    console.log(
+      `📦 Bulk Assigning ${selectedIds.length} orders to vendor ${vendorId}`,
+      selectedIds
     );
-  }, [orders, search]);
 
-  const start = (pageIndex - 1) * perPage;
-  const end = start + perPage;
-  const displayedOrders = filteredOrders.slice(start, end);
-  const pageCount = Math.max(
-    1,
-    Math.ceil((filteredOrders.length || 0) / perPage)
-  );
+    setIsAssigning(true);
+    try {
+      const response = await fetch('/api/vendor-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendor_id: vendorId,
+          order_ids: selectedIds
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setAlertMessage(
+          `✅ Successfully assigned ${selectedIds.length} orders to vendor!`
+        );
+        setSelectedVendorForAssign(null); // Reset selection
+        setSelectedOrderIds(new Set()); // Clear checkboxes
+        setSearch((prev) => prev + ' '); // Dummy trigger re-fetch
+      } else {
+        setAlertMessage(`⚠️ ${data.message || 'Failed to assign orders.'}`);
+      }
+    } catch (error) {
+      console.error('Bulk assign failed:', error);
+      setAlertMessage('❌ Failed to assign orders.');
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  // Selection Handlers
+  const toggleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const newSet = new Set(displayedOrders.map((o) => o.id));
+      setSelectedOrderIds(newSet);
+    } else {
+      setSelectedOrderIds(new Set());
+    }
+  };
+
+  const toggleSelectOrder = (orderId: string, checked: boolean) => {
+    const newSet = new Set(selectedOrderIds);
+    if (checked) {
+      newSet.add(orderId);
+    } else {
+      newSet.delete(orderId);
+    }
+    setSelectedOrderIds(newSet);
+  };
+
+  // Filter logic (Client-side search only)
+  const filteredOrders = useMemo(() => {
+    let result = orders;
+
+    // 1. Service Filter (Client-side)
+    if (serviceFilter !== 'all') {
+      result = result.filter((o) => {
+        const sId =
+          typeof (o as any).service_id === 'string'
+            ? (o as any).service_id
+            : (o as any).service_id?._id;
+        return sId === serviceFilter;
+      });
+    }
+
+    // 2. Search Filter
+    if (search.trim()) {
+      const lowerSearch = search.toLowerCase();
+      result = result.filter(
+        (o) =>
+          o.name?.toLowerCase().includes(lowerSearch) ||
+          o.plan_name?.toLowerCase().includes(lowerSearch) ||
+          o.address_line?.toLowerCase().includes(lowerSearch)
+      );
+    }
+    return result;
+  }, [orders, search, serviceFilter]);
+
+  const displayedOrders = filteredOrders;
+  const pageCount = Math.max(1, Math.ceil(50 / perPage));
+
+  // Checking "All" state
+  const isAllSelected =
+    displayedOrders.length > 0 &&
+    selectedOrderIds.size === displayedOrders.length;
+  const isIndeterminate =
+    selectedOrderIds.size > 0 && selectedOrderIds.size < displayedOrders.length; // primitive Checkbox might not support indeterminate via prop directly easily without ref, skipping for now logic-wise
 
   // Cancel order function
   const handleCancelOrder = async (orderId: string) => {
@@ -105,7 +247,6 @@ export default function OrdersPage({ className }: OrdersPageProps) {
       console.log(data);
 
       if (data.success) {
-        // Update the cancelled order status in state
         setOrders((prev) =>
           prev.map((order) =>
             order.id === orderId ? { ...order, status: 'cancelled' } : order
@@ -120,20 +261,102 @@ export default function OrdersPage({ className }: OrdersPageProps) {
       setAlertMessage('❌ Something went wrong. Please try again.');
     }
   };
+  // ... (handleBulkAssign and selection methods unchanged) ...
 
+  // ...
   return (
     <PageContainer scrollable={true}>
       <div className='flex flex-1 flex-col space-y-4 p-6'>
         {/* Header */}
-        <div className='flex w-full items-center justify-between gap-2'>
+        <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
           <h1 className='text-foreground text-2xl font-bold'>Orders</h1>
-          <Input
-            type='text'
-            placeholder='Search orders...'
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className='bg-card text-foreground border-input focus:ring-ring max-w-xs'
-          />
+
+          <div className='flex flex-col gap-2 text-sm sm:flex-row sm:items-center'>
+            {/* Service Filter */}
+            <Select
+              value={serviceFilter}
+              onValueChange={(val) => {
+                setServiceFilter(val);
+                setPageIndex(1);
+              }}
+            >
+              <SelectTrigger className='w-[160px]'>
+                <SelectValue placeholder='Filter Service' />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>All Services</SelectItem>
+                {services.map((s) => (
+                  <SelectItem key={s._id} value={s._id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Status Filter */}
+            <Select
+              value={userStatusFilter}
+              onValueChange={(val) => {
+                setUserStatusFilter(val);
+                setPageIndex(1);
+              }}
+            >
+              <SelectTrigger className='w-[180px]'>
+                <SelectValue placeholder='Filter Status' />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>All User Statuses</SelectItem>
+                <SelectItem value='processing'>Processing</SelectItem>
+                <SelectItem value='washing_completed'>
+                  Washing Completed
+                </SelectItem>
+                <SelectItem value='preparing for dispatch'>
+                  Preparing for Dispatch
+                </SelectItem>
+                <SelectItem value='out for delivery'>
+                  Out for Delivery
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Vendor Bulk Assign (Selection + Button) */}
+            <div className='flex items-center space-x-2'>
+              <Select
+                value={selectedVendorForAssign || ''}
+                onValueChange={(val) => setSelectedVendorForAssign(val)}
+              >
+                <SelectTrigger className='w-[200px]'>
+                  <SelectValue placeholder='Select Vendor' />
+                </SelectTrigger>
+                <SelectContent>
+                  {vendors.map((v) => (
+                    <SelectItem key={v._id} value={v._id}>
+                      {v.companyName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant='default'
+                onClick={handleBulkAssign}
+                disabled={
+                  !selectedVendorForAssign ||
+                  selectedOrderIds.size === 0 ||
+                  isAssigning
+                }
+              >
+                {isAssigning ? 'Assigning...' : 'Assign'}
+              </Button>
+            </div>
+
+            <Input
+              type='text'
+              placeholder='Search orders...'
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className='bg-card text-foreground border-input focus:ring-ring max-w-xs'
+            />
+          </div>
         </div>
 
         {/* Table */}
@@ -141,6 +364,15 @@ export default function OrdersPage({ className }: OrdersPageProps) {
           <Table className='w-full border-collapse'>
             <TableHeader className='bg-muted/70 sticky top-0 z-10'>
               <TableRow>
+                <TableHead className='w-[50px] pl-4'>
+                  <Checkbox
+                    checked={isAllSelected}
+                    onCheckedChange={(checked) =>
+                      toggleSelectAll(checked as boolean)
+                    }
+                  />
+                </TableHead>
+                <TableHead className='text-foreground/80'>Service</TableHead>
                 <TableHead className='text-foreground/80'>Plan Name</TableHead>
                 <TableHead className='text-foreground/80'>Name</TableHead>
                 <TableHead className='text-foreground/80'>Plan</TableHead>
@@ -150,6 +382,9 @@ export default function OrdersPage({ className }: OrdersPageProps) {
                 </TableHead>
                 <TableHead className='text-foreground/80'>
                   Order Status
+                </TableHead>
+                <TableHead className='text-foreground/80'>
+                  User Status
                 </TableHead>
                 <TableHead className='text-foreground/80'>Hub</TableHead>
                 <TableHead className='text-foreground/80 pr-6 text-right'>
@@ -162,7 +397,10 @@ export default function OrdersPage({ className }: OrdersPageProps) {
               {loading ? (
                 Array.from({ length: perPage }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 8 }).map((_, j) => (
+                    <TableCell>
+                      <Skeleton className='bg-muted/40 h-4 w-4' />
+                    </TableCell>
+                    {Array.from({ length: 9 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className='bg-muted/40 h-6 w-full' />
                       </TableCell>
@@ -172,11 +410,41 @@ export default function OrdersPage({ className }: OrdersPageProps) {
               ) : displayedOrders.length > 0 ? (
                 displayedOrders.map((order, idx) => {
                   const isCancelled = order.status === 'cancelled';
+                  const isSelected = selectedOrderIds.has(order.id);
                   return (
                     <TableRow
                       key={order.id ?? idx}
                       className='hover:bg-accent hover:text-accent-foreground transition-colors'
                     >
+                      <TableCell className='pl-4'>
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) =>
+                            toggleSelectOrder(order.id, checked as boolean)
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className='font-medium'>
+                        {/* Display Service Name. Try direct field first, then lookup map */}
+                        {(() => {
+                          if ((order as any).service_id?.name)
+                            return (order as any).service_id.name;
+                          if ((order as any).service_name)
+                            return (order as any).service_name;
+                          const serviceId =
+                            typeof (order as any).service_id === 'string'
+                              ? (order as any).service_id
+                              : (order as any).service_id?._id;
+                          const matchedService = services.find(
+                            (s) => s._id === serviceId
+                          );
+                          return matchedService
+                            ? matchedService.name
+                            : serviceId
+                              ? 'Unknown Service'
+                              : '—';
+                        })()}
+                      </TableCell>
                       <TableCell className='font-medium'>
                         {order.plan_name || '—'}
                       </TableCell>
@@ -195,6 +463,7 @@ export default function OrdersPage({ className }: OrdersPageProps) {
                           : '—'}
                       </TableCell>
                       <TableCell>{order.status || '—'}</TableCell>
+                      <TableCell>{order.user_status || '—'}</TableCell>
                       <TableCell>
                         {(() => {
                           const hub = order.hub_id || order.hub;
@@ -313,7 +582,8 @@ export default function OrdersPage({ className }: OrdersPageProps) {
               </div>
 
               <div className='text-sm font-medium'>
-                Page {pageIndex} of {pageCount}
+                Page {pageIndex}
+                {/* of {pageCount} - API total pagination needed */}
               </div>
 
               <div className='flex items-center space-x-2'>
@@ -341,7 +611,7 @@ export default function OrdersPage({ className }: OrdersPageProps) {
                   onClick={() =>
                     setPageIndex((p) => Math.min(pageCount, p + 1))
                   }
-                  disabled={pageIndex >= pageCount}
+                  // disabled={pageIndex >= pageCount}
                   className='size-8'
                 >
                   ›
@@ -349,8 +619,8 @@ export default function OrdersPage({ className }: OrdersPageProps) {
                 <Button
                   variant='outline'
                   size='icon'
-                  onClick={() => setPageIndex(pageCount)}
-                  disabled={pageIndex >= pageCount}
+                  // onClick={() => setPageIndex(pageCount)}
+                  // disabled={pageIndex >= pageCount}
                   className='hidden size-8 lg:flex'
                 >
                   »

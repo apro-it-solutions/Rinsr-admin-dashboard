@@ -14,9 +14,9 @@ interface PlanResponse {
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const planId = params.id;
+  const { id: planId } = await params;
   console.log(` GET /api/plans/${planId}`);
 
   try {
@@ -86,9 +86,9 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const planId = params.id;
+  const { id: planId } = await params;
   console.log(` PUT /api/plans/${planId}`);
 
   try {
@@ -169,9 +169,9 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const planId = params.id;
+  const { id: planId } = await params;
   console.log(` DELETE /api/plans/${planId}`);
 
   try {

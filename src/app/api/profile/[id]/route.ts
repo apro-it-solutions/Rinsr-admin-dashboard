@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 
 export async function PUT(
   req: NextRequest,
-  context: { params: Record<string, string | undefined> }
+  context: { params: Promise<{ id?: string }> }
 ) {
   // await the params proxy before reading .id
   const { id } = await context.params;
